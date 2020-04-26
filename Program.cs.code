@@ -1,0 +1,351 @@
+using Colorful;
+using ProxyChecker;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using xNet;
+
+internal class Program
+{
+	private static readonly Writer writer;
+
+	public static void Main(string[] args)
+	{
+		Welcome();
+		Colorful.Console.ReadLine();
+	}
+
+	private static void Welcome()
+	{
+		Colorful.Console.Title = $"ProxyScrape - Checker | V{Variables.Version} ";
+		Messages.PrintAnsi();
+		Messages.PrintWithPrefix("Welcome", "Welcome to the original ProxyChecker from ProxyScrape.com", "Lime");
+		Thread.Sleep(3000);
+		Colorful.Console.Clear();
+		Messages.PrintWithPrefix("Info", "Loading menu.", "Yellow");
+		Thread.Sleep(1000);
+		Colorful.Console.Clear();
+		Messages.PrintWithPrefix("Info", "Loading menu..", "Lime");
+		Thread.Sleep(1000);
+		Colorful.Console.Clear();
+		Messages.PrintWithPrefix("Info", "Loading menu...", "Red");
+		Thread.Sleep(1000);
+		Colorful.Console.Clear();
+		Messages.PrintWithPrefix("Info", "Loading menu.", "Yellow");
+		Thread.Sleep(500);
+		Menu();
+	}
+
+	private static void Menu()
+	{
+		Colorful.Console.Title = $"ProxyScrape - Checker | V{Variables.Version} | Menu waiting...";
+		Colorful.Console.Clear();
+		Messages.PrintAnsi();
+		Messages.PrintWithPrefix("1", "Check proxies", "Tomato");
+		Messages.PrintWithPrefix("2", "Scrape proxies", "Red");
+		string a = Colorful.Console.ReadLine();
+		if (a == "1")
+		{
+			Check();
+		}
+		else
+		{
+			Scrape();
+		}
+	}
+
+	private static void Scrape()
+	{
+		int total = 0;
+		int unique = 0;
+		Messages.PrintWithoutPrefix("Scraping proxies from Sources.txt! (can take a while...)");
+		List<string> source = File.ReadLines("Sources.txt").ToList();
+		ThreadPool.SetMinThreads(50, 50);
+		ThreadPool.SetMaxThreads(50, 50);
+		Parallel.ForEach(source, delegate(string currentUrl)
+		{
+			try
+			{
+				WebClient webClient = new WebClient();
+				string input = webClient.DownloadString(currentUrl);
+				MatchCollection matchCollection = Regex.Matches(input, "\\b(\\d{1,3}\\.){3}\\d{1,3}\\:\\d{1,8}\\b", RegexOptions.Singleline);
+				foreach (Match line in matchCollection)
+				{
+					total++;
+					if (!Variables.Proxies.Any((string o) => string.Equals(line.Groups[0].Value, o, StringComparison.OrdinalIgnoreCase)))
+					{
+						unique++;
+						Variables.Proxies.Add(line.Groups[0].Value);
+					}
+				}
+				Colorful.Console.Title = $"ProxyScrape - Scraper | V{Variables.Version} | Total Scraped: {total} Duplicates removed: {total - unique}";
+			}
+			catch (Exception)
+			{
+			}
+			Colorful.Console.Title = $"ProxyScrape - Scraper | V{Variables.Version} | Total Scraped: {total} Duplicates removed: {total - unique}";
+			Messages.PrintWithoutPrefix("Scraping from: " + currentUrl + " Done!");
+		});
+		Messages.PrintWithoutPrefix($"Total Scraped: {total} Duplicates removed: {total - unique}");
+		Messages.PrintWithoutPrefix("What u want todo with the proxies?");
+		Messages.PrintWithPrefix("1", "Save scraped proxies to file!", "Tomato");
+		Messages.PrintWithPrefix("2", "Check scraped proxies", "Red");
+		string text = Colorful.Console.ReadLine();
+		if (text.Contains("1"))
+		{
+			Messages.PrintWithoutPrefix("What filename u want it to be? (example.txt)");
+			string text2 = Colorful.Console.ReadLine();
+			foreach (string proxy in Variables.Proxies)
+			{
+				writer.FilePath = text2;
+				writer.AppendToFile(proxy);
+			}
+			Messages.PrintWithoutPrefix("Done saving proxies to: " + text2);
+			return;
+		}
+		Messages.PrintWithoutPrefix("timeout in MS example(5 seconds = 5000 ms)");
+		Variables.TimeOut = int.Parse(Colorful.Console.ReadLine());
+		Messages.PrintWithoutPrefix("Threads amount? or press enter (for default 250)");
+		string text3 = Colorful.Console.ReadLine();
+		if (!string.IsNullOrWhiteSpace(text3))
+		{
+			Variables.Threads = int.Parse(text3);
+		}
+		Messages.PrintWithoutPrefix("What proxy type u want to use?");
+		Messages.PrintWithPrefix("1", "HTTP/s", "Tomato");
+		Messages.PrintWithPrefix("2", "Socks4", "Red");
+		Messages.PrintWithPrefix("3", "Socks5", "Tomato");
+		Variables.Type = Colorful.Console.ReadLine();
+		Messages.PrintWithoutPrefix("Do you want to support ProxyScrape by sharing your working proxies? (y or n)");
+		Messages.PrintWithPrefix("Y", "Yes I want to support ProxyScrape", "Tomato");
+		Messages.PrintWithPrefix("N", "No, I dont want to support ProxyScrape", "Tomato");
+		Variables.Permission = Colorful.Console.ReadLine();
+		if (string.IsNullOrWhiteSpace(Variables.Permission))
+		{
+			Variables.Permission = "y";
+		}
+		CheckProxies();
+	}
+
+	private static void Check()
+	{
+		Messages.PrintWithoutPrefix("timeout in MS example(5 seconds = 5000 ms)");
+		Variables.TimeOut = int.Parse(Colorful.Console.ReadLine());
+		Messages.PrintWithoutPrefix("Threads amount? or press enter (for default 250)");
+		string text = Colorful.Console.ReadLine();
+		if (!string.IsNullOrWhiteSpace(text))
+		{
+			Variables.Threads = int.Parse(text);
+		}
+		Messages.PrintWithoutPrefix("What proxy type u want to use?");
+		Messages.PrintWithPrefix("1", "HTTP/s", "Tomato");
+		Messages.PrintWithPrefix("2", "Socks4", "Red");
+		Messages.PrintWithPrefix("3", "Socks5", "Tomato");
+		Variables.Type = Colorful.Console.ReadLine();
+		Messages.PrintWithoutPrefix("From what u want to check");
+		Messages.PrintWithPrefix("1", "Check from ProxyScrape.com", "Tomato");
+		Messages.PrintWithPrefix("2", "Check from your own file", "Red");
+		if (Colorful.Console.ReadLine().Contains("1"))
+		{
+			WebClient webClient = new WebClient();
+			if (Variables.Type.Contains("1"))
+			{
+				foreach (Match item in Regex.Matches(webClient.DownloadString("https://api.proxyscrape.com/?request=displayproxies&proxytype=http"), "\\b(\\d{1,3}\\.){3}\\d{1,3}\\:\\d{1,8}\\b", RegexOptions.Singleline))
+				{
+					Variables.Proxies.Add(item.Groups[0].Value);
+				}
+				Messages.PrintWithoutPrefix("Loaded: " + Variables.Proxies.Count + " From your proxyscrape.com!");
+			}
+			else if (Variables.Type.Contains("2"))
+			{
+				foreach (Match item2 in Regex.Matches(webClient.DownloadString("https://api.proxyscrape.com/?request=displayproxies&proxytype=socks4"), "\\b(\\d{1,3}\\.){3}\\d{1,3}\\:\\d{1,8}\\b", RegexOptions.Singleline))
+				{
+					Variables.Proxies.Add(item2.Groups[0].Value);
+				}
+				Messages.PrintWithoutPrefix("Loaded: " + Variables.Proxies.Count + " From your proxyscrape.com!");
+			}
+			else if (Variables.Type.Contains("3"))
+			{
+				foreach (Match item3 in Regex.Matches(webClient.DownloadString("https://api.proxyscrape.com/?request=displayproxies&proxytype=socks5"), "\\b(\\d{1,3}\\.){3}\\d{1,3}\\:\\d{1,8}\\b", RegexOptions.Singleline))
+				{
+					Variables.Proxies.Add(item3.Groups[0].Value);
+				}
+				Messages.PrintWithoutPrefix("Loaded: " + Variables.Proxies.Count + " From your proxyscrape.com!");
+			}
+			CheckProxies();
+			return;
+		}
+		Messages.PrintWithoutPrefix("Drag your Proxy file in here!");
+		string text2 = Colorful.Console.ReadLine();
+		string path = (!text2.Contains("\"")) ? text2 : text2.Replace("\"", "");
+		Variables.Proxies = File.ReadLines(path).ToList();
+		Messages.PrintWithoutPrefix("Loaded: " + Variables.Proxies.Count + " From your file!");
+		Messages.PrintWithoutPrefix("Do you want to support ProxyScrape by sharing your working proxies? (y or n)");
+		Messages.PrintWithPrefix("Y", "Yes I want to support ProxyScrape", "Tomato");
+		Messages.PrintWithPrefix("N", "No, I dont want to support ProxyScrape", "Tomato");
+		Variables.Permission = Colorful.Console.ReadLine();
+		if (string.IsNullOrWhiteSpace(Variables.Permission))
+		{
+			Variables.Permission = "y";
+		}
+		CheckProxies();
+	}
+
+	private static void CheckProxies()
+	{
+		if (Variables.Type.Contains("1"))
+		{
+			Variables.Folder = Folder("Checker - HTTP");
+		}
+		else if (Variables.Type.Contains("2"))
+		{
+			Variables.Folder = Folder("Checker - Socks4");
+		}
+		else if (Variables.Type.Contains("3"))
+		{
+			Variables.Folder = Folder("Checker - Socks5");
+		}
+		ConvertProxies();
+		try
+		{
+			for (int i = 0; i < Variables.Threads; i++)
+			{
+				new Thread(Runner).Start();
+			}
+		}
+		catch (Exception)
+		{
+		}
+	}
+
+	private static string Folder(string mode)
+	{
+		string str = DateTime.Now.ToString("dd-MM-yyyy-hhmm - ");
+		Directory.CreateDirectory(str + mode);
+		return str + mode;
+	}
+
+	private static void ConvertProxies()
+	{
+		foreach (string proxy in Variables.Proxies)
+		{
+			Variables.ProxiesQueue.Enqueue(proxy);
+		}
+	}
+
+	private static void Runner()
+	{
+		while (Variables.ProxiesQueue.Count != 0)
+		{
+			CheckProxy(Variables.ProxiesQueue.Dequeue());
+		}
+	}
+
+	private static void CheckProxy(string line)
+	{
+		try
+		{
+			using (HttpRequest httpRequest = new HttpRequest())
+			{
+				string filePath = Path.Combine(Variables.Folder, "Alive.txt");
+				httpRequest.KeepAlive = false;
+				httpRequest.ConnectTimeout = Variables.TimeOut;
+				if (Variables.Type.Contains("1"))
+				{
+					httpRequest.KeepAlive = false;
+					httpRequest.ConnectTimeout = Variables.TimeOut;
+					httpRequest.Proxy = line;
+					httpRequest.Type = "HTTP";
+					if (Variables.Permission.Contains("y"))
+					{
+						if (httpRequest.Start(HttpMethod.GET, new Uri("http://judge.proxyscrape.com/"), null).ToString().Contains("Connection working!"))
+						{
+							writer.FilePath = filePath;
+							writer.AppendToFile(line);
+							Variables.Alive++;
+							Colorful.Console.WriteLine($"{line} | Working proxy HTTP/s", Color.Lime);
+							Colorful.Console.Title = $"ProxyScrape - Checker | V{Variables.Version} | Alive: {Variables.Alive} Dead: {Variables.Dead}";
+						}
+					}
+					else if (httpRequest.Start(HttpMethod.GET, new Uri("http://judge.proxyscrape.com/"), null).ToString().Contains("Connection working!"))
+					{
+						writer.FilePath = filePath;
+						writer.AppendToFile(line);
+						Variables.Alive++;
+						Colorful.Console.WriteLine($"{line} | Working proxy HTTP/s", Color.Lime);
+						Colorful.Console.Title = $"ProxyScrape - Checker | V{Variables.Version} | Alive: {Variables.Alive} Dead: {Variables.Dead}";
+					}
+				}
+				else if (Variables.Type.Contains("2"))
+				{
+					httpRequest.KeepAlive = false;
+					httpRequest.ConnectTimeout = Variables.TimeOut;
+					httpRequest.Proxy = line;
+					httpRequest.Type = "socks4";
+					if (Variables.Permission.Contains("y"))
+					{
+						if (httpRequest.Start(HttpMethod.GET, new Uri("http://judge.proxyscrape.com/"), null).ToString().Contains("Connection working!"))
+						{
+							writer.FilePath = filePath;
+							writer.AppendToFile(line);
+							Variables.Alive++;
+							Colorful.Console.WriteLine($"{line} | Working proxy Socks4", Color.Lime);
+							Colorful.Console.Title = $"ProxyScrape - Checker | V{Variables.Version} | Alive: {Variables.Alive} Dead: {Variables.Dead}";
+						}
+					}
+					else if (httpRequest.Start(HttpMethod.GET, new Uri("http://judge.proxyscrape.com/"), null).ToString().Contains("Connection working!"))
+					{
+						writer.FilePath = filePath;
+						writer.AppendToFile(line);
+						Variables.Alive++;
+						Colorful.Console.WriteLine($"{line} | Working proxy Socks4", Color.Lime);
+						Colorful.Console.Title = $"ProxyScrape - Checker | V{Variables.Version} | Alive: {Variables.Alive} Dead: {Variables.Dead}";
+					}
+				}
+				else if (Variables.Type.Contains("3"))
+				{
+					httpRequest.KeepAlive = false;
+					httpRequest.ConnectTimeout = Variables.TimeOut;
+					httpRequest.Proxy = line;
+					httpRequest.Type = "socks5";
+					if (Variables.Permission.Contains("y"))
+					{
+						if (httpRequest.Start(HttpMethod.GET, new Uri("http://judge.proxyscrape.com/"), null).ToString().Contains("Connection working!"))
+						{
+							writer.FilePath = filePath;
+							writer.AppendToFile(line);
+							Variables.Alive++;
+							Colorful.Console.WriteLine($"{line} | Working proxy Socks5", Color.Lime);
+							Colorful.Console.Title = $"ProxyScrape - Checker | V{Variables.Version} | Alive: {Variables.Alive} Dead: {Variables.Dead}";
+						}
+					}
+					else if (httpRequest.Start(HttpMethod.GET, new Uri("http://judge.proxyscrape.com/"), null).ToString().Contains("Connection working!"))
+					{
+						writer.FilePath = filePath;
+						writer.AppendToFile(line);
+						Variables.Alive++;
+						Colorful.Console.WriteLine($"{line} | Working proxy Socks5", Color.Lime);
+						Colorful.Console.Title = $"ProxyScrape - Checker | V{Variables.Version} | Alive: {Variables.Alive} Dead: {Variables.Dead}";
+					}
+				}
+			}
+		}
+		catch (Exception)
+		{
+			Colorful.Console.WriteLine($"{line} | Dead proxy", Color.Red);
+			Variables.Dead++;
+			Colorful.Console.Title = $"ProxyScrape - Checker | V{Variables.Version} | Alive: {Variables.Alive} Dead: {Variables.Dead}";
+		}
+	}
+
+	static Program()
+	{
+		writer = new Writer();
+	}
+}

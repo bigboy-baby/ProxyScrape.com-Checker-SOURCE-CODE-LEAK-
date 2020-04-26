@@ -1,0 +1,31 @@
+using Colorful;
+using System.Drawing;
+
+public class Messages
+{
+	private static readonly object Locked = new object();
+
+	public static void PrintWithPrefix(string prefix, string message, string prefixColour)
+	{
+		lock (Locked)
+		{
+			Console.Write("[", Color.White);
+			Console.Write(prefix, Color.FromName(prefixColour));
+			Console.WriteLine("] " + message, Color.White);
+		}
+	}
+
+	public static void PrintWithoutPrefix(string message)
+	{
+		lock (Locked)
+		{
+			Console.WriteLine(message, Color.White);
+		}
+	}
+
+	public static void PrintAnsi()
+	{
+		Console.WriteLine("\n\n██████╗ ██████╗  ██████╗ ██╗  ██╗██╗   ██╗███████╗ ██████╗██████╗  █████╗ ██████╗ ███████╗\n██╔══██╗██╔══██╗██╔═══██╗╚██╗██╔╝╚██╗ ██╔╝██╔════╝██╔════╝██╔══██╗██╔══██╗██╔══██╗██╔════╝\n██████╔╝██████╔╝██║   ██║ ╚███╔╝  ╚████╔╝ ███████╗██║     ██████╔╝███████║██████╔╝█████╗  \n██╔═══╝ ██╔══██╗██║   ██║ ██╔██╗   ╚██╔╝  ╚════██║██║     ██╔══██╗██╔══██║██╔═══╝ ██╔══╝  \n██║     ██║  ██║╚██████╔╝██╔╝ ██╗   ██║   ███████║╚██████╗██║  ██║██║  ██║██║     ███████╗\n╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚══════╝\n", Color.Tomato);
+	}
+}
+
